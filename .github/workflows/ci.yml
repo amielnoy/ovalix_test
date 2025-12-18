@@ -11,14 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin docker.io
-
-      - name: Build and start services
-        run: |
-          docker compose -f compose.yml up --build -d
+      - name: Start services with Docker Compose
+        uses: docker/compose-action@v2
+        with:
+          files: compose.yml
+          run: up --build -d
 
       - name: Wait for web to be ready
         run: |
@@ -49,7 +46,9 @@ jobs:
           source .venv/bin/activate
           pytest -q
 
-      - name: Tear down
+      - name: Tear down services
         if: always()
-        run: |
-          docker compose -f compose.yml down
+        uses: docker/compose-action@v2
+        with:
+          files: compose.yml
+          run: down
