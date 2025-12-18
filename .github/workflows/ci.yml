@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose-plugin docker.io
+
+      - name: Build and start services
+        run: |
+          docker compose -f compose.yml up --build -d
+
+      - name: Wait for web to be ready
+        run: |
+          for i in {1..30}; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/userapp/users || true)
+            if [ "$status" = "200" ] || [ "$status" = "404" ]; then
+              echo "service ready (status=$status)"; break
+            fi
+            echo "waiting for service... ($i)"; sleep 2
+          done
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install test requirements
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r test_automation/requirements.txt
+
+      - name: Run pytest
+        env:
+          API_BASE_URL: http://localhost:8000/userapp/users
+        run: |
+          source .venv/bin/activate
+          pytest -q
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -f compose.yml down

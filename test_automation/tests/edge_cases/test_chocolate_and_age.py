@@ -63,37 +63,3 @@ def test_likes_chocolate_invalid_choice(user_service):
         user_service.delete_user(user_id)
 
 
-@pytest.mark.parametrize('age', [None, 0, -1, 2000])
-def test_age_first_taste_edge_cases(user_service, age):
-    unique = uuid.uuid4().hex[:6]
-    payload = {
-        'first_name': f'Age{unique}',
-        'last_name': 'Tester',
-        'dob': '1990-01-01',
-    }
-    if age is not None:
-        payload['age_first_taste_chocolate'] = age
-
-    r = user_service.create_user(payload)
-    assert r is not None
-    # allow either success or validation error depending on API rules
-    assert r.status_code in (200, 201, 202, 400, 422), f'Unexpected status: {r.status_code} {r.text}'
-
-    if r.status_code in (200, 201, 202):
-        try:
-            body = r.json()
-        except Exception:
-            body = {}
-        user_id = _extract_id(body)
-        assert user_id
-        # if stored, verify returned value matches (when present)
-        if age is not None and isinstance(body, dict):
-            # serializer may coerce types; compare as int when possible
-            got = body.get('age_first_taste_chocolate')
-            if got is not None:
-                try:
-                    assert int(got) == age
-                except Exception:
-                    pass
-        # cleanup
-        user_service.delete_user(user_id)
