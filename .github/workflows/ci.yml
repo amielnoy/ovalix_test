@@ -3,6 +3,15 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_full_suite:
+        description: 'Run full test suite (true/false)'
+        required: false
+        default: 'true'
+      api_base_url:
+        description: 'Override API_BASE_URL for this run'
+        required: false
 
 jobs:
   build-and-test:
